@@ -88,12 +88,39 @@
       .field {
         margin-bottom: 10px;
       }
+      .field-label-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+      .field-label-row label {
+        margin-bottom: 0;
+      }
       .field label {
         display: block;
         font-size: 12px;
         color: var(--muted);
         margin-bottom: 4px;
         font-weight: 600;
+      }
+      .add-inline-btn {
+        border: 1px dashed #b7c0bf;
+        background: #fff;
+        color: var(--brand-dark);
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        cursor: pointer;
+        white-space: nowrap;
+        line-height: 1.6;
+        font-family: inherit;
+      }
+      .add-inline-btn:hover {
+        background: #eef2f1;
+        border-color: var(--brand);
       }
       .hint-tiny {
         font-size: 11px;
@@ -648,6 +675,75 @@
       .select2-results__option--highlighted[aria-selected] {
         background-color: var(--brand) !important;
       }
+
+      /* ---------- Modal (Add Doctor / Add Test) ---------- */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(20, 26, 28, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 16px;
+      }
+      .modal-overlay.open {
+        display: flex;
+      }
+      .modal-box {
+        background: #fff;
+        border-radius: 14px;
+        width: 100%;
+        max-width: 380px;
+        padding: 18px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      }
+      .modal-box h3 {
+        margin: 0 0 4px 0;
+        font-size: 15px;
+        color: var(--brand-dark);
+      }
+      .modal-box .modal-sub {
+        font-size: 11.5px;
+        color: var(--muted);
+        margin: 0 0 14px 0;
+        line-height: 1.5;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+      }
+      .modal-actions .btn {
+        flex: 1;
+      }
+      .modal-close-x {
+        float: right;
+        border: none;
+        background: none;
+        font-size: 16px;
+        cursor: pointer;
+        color: var(--muted);
+        line-height: 1;
+        padding: 2px 4px;
+      }
+      .modal-error {
+        color: var(--danger);
+        font-size: 11.5px;
+        margin-top: 4px;
+        display: none;
+      }
+      .custom-tag {
+        display: inline-block;
+        font-size: 9.5px;
+        font-weight: 700;
+        color: #7a5a1e;
+        background: #fbeed4;
+        border-radius: 4px;
+        padding: 0 4px;
+        margin-left: 4px;
+        vertical-align: middle;
+      }
     </style>
   </head>
   <body>
@@ -655,7 +751,8 @@
       <h1>Money Receipt Generator</h1>
       <p class="bn">
         সব ডাটা শুধু আপনার ব্রাউজারে (localStorage) সংরক্ষিত থাকে — কোনো
-        সার্ভারে পাঠানো হয় না।
+        সার্ভারে পাঠানো হয় না। নতুন ডাক্তার/টেস্ট যোগ করলে সেটাও এই ব্রাউজারেই
+        মনে রাখা হবে এবং test.json / doctors.json এর লিস্টের সাথে মিশে যাবে।
       </p>
     </header>
 
@@ -713,7 +810,16 @@
             </div>
           </div>
           <div class="field">
-            <label>Referred By</label>
+            <div class="field-label-row">
+              <label>Referred By</label>
+              <button
+                type="button"
+                class="add-inline-btn"
+                id="openAddDoctorBtn"
+              >
+                + Add Doctor
+              </button>
+            </div>
             <select id="referredBy">
               <option value="">Loading doctors.json…</option>
             </select>
@@ -739,10 +845,19 @@
         <div class="panel">
           <h2>Add Investigation</h2>
           <div class="field" style="margin: 0">
-            <label
-              >Investigation (from test.json) — select to insert
-              instantly</label
-            >
+            <div class="field-label-row">
+              <label
+                >Investigation (from test.json) — select to insert
+                instantly</label
+              >
+              <button
+                type="button"
+                class="add-inline-btn"
+                id="openAddTestBtn"
+              >
+                + Add Test
+              </button>
+            </div>
             <select id="investSelect">
               <option value="">Loading test.json…</option>
             </select>
@@ -791,6 +906,18 @@
           <div class="footer-actions">
             <button class="btn btn-brand" id="printBtn">🖨 Print (A5)</button>
             <button class="btn btn-danger" id="clearBtn">Clear All</button>
+          </div>
+          <div class="footer-actions">
+            <button class="btn btn-ghost" id="exportDoctorsBtn">
+              ⬇ Export doctors.json
+            </button>
+            <button class="btn btn-ghost" id="exportTestsBtn">
+              ⬇ Export test.json
+            </button>
+          </div>
+          <div class="hint-tiny bn" style="text-align: center">
+            নতুন যোগ করা নাম/টেস্ট সবার জন্য স্থায়ী করতে চাইলে এখান থেকে
+            ডাউনলোড করে সার্ভারের আসল ফাইলটি রিপ্লেস করুন।
           </div>
           <div class="status-note" id="saveStatus">
             Saved automatically to this browser
@@ -927,6 +1054,68 @@
       </div>
     </div>
 
+    <!-- ===================== MODAL: Add Doctor ===================== -->
+    <div class="modal-overlay" id="addDoctorModal">
+      <div class="modal-box">
+        <button type="button" class="modal-close-x" data-close-modal="addDoctorModal">✕</button>
+        <h3>নতুন ডাক্তার যোগ করুন</h3>
+        <p class="modal-sub bn">
+          এই ডাক্তার এই মুহূর্তে যোগ হয়ে "Referred By" ড্রপডাউনে দেখাবে এবং
+          সিলেক্ট হয়ে যাবে। এটি এই ব্রাউজারে সংরক্ষিত থাকে।
+        </p>
+        <div class="field">
+          <label>Doctor Name</label>
+          <input
+            type="text"
+            id="newDoctorName"
+            placeholder="Dr. Full Name, MBBS…"
+          />
+          <div class="modal-error" id="newDoctorError">
+            নাম খালি রাখা যাবে না।
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-modal="addDoctorModal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-brand" id="saveDoctorBtn">
+            Save & Select
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== MODAL: Add Test ===================== -->
+    <div class="modal-overlay" id="addTestModal">
+      <div class="modal-box">
+        <button type="button" class="modal-close-x" data-close-modal="addTestModal">✕</button>
+        <h3>নতুন টেস্ট যোগ করুন</h3>
+        <p class="modal-sub bn">
+          এই টেস্ট এই মুহূর্তে যোগ হয়ে ইনভয়েসে ইনসার্ট হয়ে যাবে এবং
+          "Investigation" লিস্টেও থেকে যাবে। এটি এই ব্রাউজারে সংরক্ষিত থাকে।
+        </p>
+        <div class="field">
+          <label>Test Name</label>
+          <input type="text" id="newTestName" placeholder="e.g. S.Magnesium" />
+        </div>
+        <div class="field">
+          <label>Price</label>
+          <input type="number" id="newTestPrice" placeholder="e.g. 500" />
+          <div class="modal-error" id="newTestError">
+            নাম ও সঠিক প্রাইস দিন।
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-ghost" data-close-modal="addTestModal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-brand" id="saveTestBtn">
+            Save & Insert
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
@@ -935,6 +1124,8 @@
       (function () {
         const STORAGE_KEY = "money_receipt_state_v1";
         const OPERATOR_KEY = "money_receipt_operator_name_v1";
+        const CUSTOM_DOCTORS_KEY = "money_receipt_custom_doctors_v1";
+        const CUSTOM_TESTS_KEY = "money_receipt_custom_tests_v1";
         const $ = (id) => document.getElementById(id);
 
         function saveOperatorName(name) {
@@ -948,6 +1139,62 @@
           } catch (e) {
             return "";
           }
+        }
+
+        // ---------- Custom (browser-saved) doctors / tests ----------
+        function loadCustomList(key) {
+          try {
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            return [];
+          }
+        }
+        function saveCustomList(key, list) {
+          try {
+            localStorage.setItem(key, JSON.stringify(list));
+          } catch (e) {}
+        }
+
+        let baseDoctors = []; // from doctors.json
+        let baseTests = []; // from test.json
+        let customDoctors = loadCustomList(CUSTOM_DOCTORS_KEY);
+        let customTests = loadCustomList(CUSTOM_TESTS_KEY);
+
+        function mergedDoctors() {
+          const seen = new Set();
+          const out = [];
+          baseDoctors.concat(customDoctors).forEach((d) => {
+            const key = (d.name || "").trim().toLowerCase();
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            out.push(d);
+          });
+          return out;
+        }
+        function mergedTests() {
+          const seen = new Set();
+          const out = [];
+          baseTests.concat(customTests).forEach((t) => {
+            const key = (t.name || "").trim().toLowerCase();
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            out.push(t);
+          });
+          return out;
+        }
+        function isCustomDoctor(name) {
+          const key = (name || "").trim().toLowerCase();
+          return customDoctors.some(
+            (d) => (d.name || "").trim().toLowerCase() === key,
+          );
+        }
+        function isCustomTest(name) {
+          const key = (name || "").trim().toLowerCase();
+          return customTests.some(
+            (t) => (t.name || "").trim().toLowerCase() === key,
+          );
         }
 
         const fields = [
@@ -1090,23 +1337,29 @@
           });
         }
 
-        function populateInvestigations(list) {
+        function populateInvestigations() {
+          const list = mergedTests();
+          window.__investList = list;
           const sel = $("investSelect");
           sel.innerHTML = '<option value="">— Select investigation —</option>';
           list.forEach((it, i) => {
             const opt = document.createElement("option");
             opt.value = i;
-            opt.textContent = it.name + " (" + it.price + ")";
+            opt.textContent =
+              it.name + " (" + it.price + ")" + (isCustomTest(it.name) ? " ★" : "");
             sel.appendChild(opt);
           });
-          window.__investList = list;
 
+          if (jQuery("#investSelect").data("select2")) {
+            jQuery("#investSelect").select2("destroy");
+          }
           jQuery("#investSelect")
             .select2({
               placeholder: "Type to search & select to insert…",
               width: "100%",
               dropdownAutoWidth: false,
             })
+            .off("change")
             .on("change", function () {
               const idx = this.value;
               if (idx === "") return;
@@ -1119,17 +1372,22 @@
             });
         }
 
-        function populateDoctors(list) {
+        function populateDoctors(selectValue) {
+          const list = mergedDoctors();
+          window.__doctorList = list;
           const sel = $("referredBy");
           sel.innerHTML =
             '<option value="">— Select referring doctor —</option>';
           list.forEach((d) => {
             const opt = document.createElement("option");
             opt.value = d.name;
-            opt.textContent = d.name;
+            opt.textContent = d.name + (isCustomDoctor(d.name) ? " ★" : "");
             sel.appendChild(opt);
           });
 
+          if (jQuery("#referredBy").data("select2")) {
+            jQuery("#referredBy").select2("destroy");
+          }
           jQuery("#referredBy").select2({
             placeholder: "Type to search doctor…",
             width: "100%",
@@ -1137,28 +1395,137 @@
           });
 
           jQuery("#referredBy")
-            .val(state.referredBy || "")
+            .val(
+              selectValue !== undefined ? selectValue : state.referredBy || "",
+            )
             .trigger("change");
-          jQuery("#referredBy").on("change", function () {
-            state.referredBy = this.value;
-            render();
-            saveState();
-          });
+          jQuery("#referredBy")
+            .off("change.bind")
+            .on("change.bind", function () {
+              state.referredBy = this.value;
+              render();
+              saveState();
+            });
         }
 
         loadJSON("test.json")
-          .then(populateInvestigations)
+          .then((list) => {
+            baseTests = Array.isArray(list) ? list : [];
+          })
           .catch(() => {
-            $("investSelect").innerHTML =
-              '<option value="">⚠ test.json not found</option>';
+            baseTests = [];
+          })
+          .finally(() => {
+            populateInvestigations();
           });
 
         loadJSON("doctors.json")
-          .then(populateDoctors)
+          .then((list) => {
+            baseDoctors = Array.isArray(list) ? list : [];
+          })
           .catch(() => {
-            $("referredBy").innerHTML =
-              '<option value="">⚠ doctors.json not found</option>';
+            baseDoctors = [];
+          })
+          .finally(() => {
+            populateDoctors();
           });
+
+        // ---------- Add Doctor / Add Test modals ----------
+        function openModal(id) {
+          $(id).classList.add("open");
+        }
+        function closeModal(id) {
+          $(id).classList.remove("open");
+        }
+        document.querySelectorAll("[data-close-modal]").forEach((btn) => {
+          btn.addEventListener("click", () =>
+            closeModal(btn.dataset.closeModal),
+          );
+        });
+        document.querySelectorAll(".modal-overlay").forEach((ov) => {
+          ov.addEventListener("click", (e) => {
+            if (e.target === ov) ov.classList.remove("open");
+          });
+        });
+
+        $("openAddDoctorBtn").addEventListener("click", () => {
+          $("newDoctorName").value = "";
+          $("newDoctorError").style.display = "none";
+          openModal("addDoctorModal");
+          setTimeout(() => $("newDoctorName").focus(), 50);
+        });
+
+        $("saveDoctorBtn").addEventListener("click", () => {
+          const name = $("newDoctorName").value.trim();
+          if (!name) {
+            $("newDoctorError").style.display = "block";
+            return;
+          }
+          const exists = mergedDoctors().some(
+            (d) => (d.name || "").trim().toLowerCase() === name.toLowerCase(),
+          );
+          if (!exists) {
+            customDoctors.push({ name });
+            saveCustomList(CUSTOM_DOCTORS_KEY, customDoctors);
+          }
+          populateDoctors(name);
+          state.referredBy = name;
+          render();
+          saveState();
+          closeModal("addDoctorModal");
+          flashStatus("Doctor added ✓");
+        });
+
+        $("openAddTestBtn").addEventListener("click", () => {
+          $("newTestName").value = "";
+          $("newTestPrice").value = "";
+          $("newTestError").style.display = "none";
+          openModal("addTestModal");
+          setTimeout(() => $("newTestName").focus(), 50);
+        });
+
+        $("saveTestBtn").addEventListener("click", () => {
+          const name = $("newTestName").value.trim();
+          const price = parseFloat($("newTestPrice").value);
+          if (!name || isNaN(price)) {
+            $("newTestError").style.display = "block";
+            return;
+          }
+          const exists = mergedTests().some(
+            (t) => (t.name || "").trim().toLowerCase() === name.toLowerCase(),
+          );
+          if (!exists) {
+            customTests.push({ name, price });
+            saveCustomList(CUSTOM_TESTS_KEY, customTests);
+          }
+          populateInvestigations();
+          // insert straight into the receipt, like picking it from the dropdown
+          state.items.push({ name, price });
+          render();
+          saveState();
+          closeModal("addTestModal");
+          flashStatus("Test added ✓");
+        });
+
+        function downloadJSON(filename, data) {
+          const blob = new Blob([JSON.stringify(data, null, 2)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        }
+        $("exportDoctorsBtn").addEventListener("click", () => {
+          downloadJSON("doctors.json", mergedDoctors());
+        });
+        $("exportTestsBtn").addEventListener("click", () => {
+          downloadJSON("test.json", mergedTests());
+        });
 
         // ---------- Bind form -> state ----------
         function bindInputs() {
