@@ -1,0 +1,17 @@
+[
+  { "name": "CBC", "price": 500 },
+  { "name": "RBS", "price": 100 },
+  { "name": "S. Creatinine", "price": 100 },
+  { "name": "HBsAg (Conformity)", "price": 900 },
+  { "name": "TSH", "price": 900 },
+  { "name": "Triple Antigen", "price": 800 },
+  { "name": "Blood Group", "price": 100 },
+  { "name": "Urine R/E/M", "price": 200 },
+  { "name": "USG Of Brest", "price": 1000 },
+  { "name": "S.C Accessories Quantity", "price": 400 },
+  { "name": "Lipid Profile", "price": 1200 },
+  { "name": "X-Ray Chest P/A View", "price": 500 },
+  { "name": "ECG", "price": 300 },
+  { "name": "Serum Creatinine", "price": 350 },
+  { "name": "HbA1c", "price": 900 }
+]
